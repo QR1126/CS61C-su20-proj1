@@ -71,15 +71,15 @@ int main(int argc, char **argv) {
 unsigned int stringHash(void *s) {
   char *string = (char *)s;
   // -- TODO --
-  int n = strlen(string);
-  unsigned long long p[n+1], h[n+1];
-  p[0] = 1;
-  h[0] = 0;
-  for (int i = 0; i < n; i++) {
-      p[i+1] = p[i] * 131;
-      h[i+1] = h[i] * 131 + string[i];
+  unsigned int res = 0;
+  unsigned int ch = 0;
+  size_t n = strlen(string);
+  size_t i = 0;
+  for (; i < n; i++) {
+      ch = *(string + i);
+      res = res * 31 + ch;
   }
-  return (unsigned int) h[n];
+  return res;
 }
 
 /*
@@ -90,7 +90,16 @@ int stringEquals(void *s1, void *s2) {
   char *string1 = (char *)s1;
   char *string2 = (char *)s2;
   // -- TODO --
-  return stringHash(string1) == stringHash(string2) ? 1 : 0;
+  size_t n1 = strlen(string1);
+  size_t n2 = strlen(string2);
+  if (n1 != n2) return 0;
+  size_t i = 0;
+  for (; i < n1; i++) {
+      if (*(string1 + i) != *(string2 + i)) {
+          return 0;
+      }
+  }
+  return 1;
 }
 
 /*
@@ -111,7 +120,21 @@ int stringEquals(void *s1, void *s2) {
  */
 void readDictionary(char *dictName) {
   // -- TODO --
-  FILE *fp;
+  FILE *fp = fopen(dictName, "r");
+  if (fp == NULL) {
+      fprintf(stderr, "open file failed\n");
+      exit(61);
+  }
+  const int size = 1000000;
+  while (1) {
+      char *key = (char *) malloc(sizeof(char) * size);
+      char *data = (char *) malloc(sizeof(char) * size);
+      if (fscanf(fp, "%s%s", key, data) == EOF) {
+          break;
+      }
+      if (strlen(key) && strlen(data)) insertData(dictionary, key, data);
+  }
+  fclose(fp);
 }
 
 /*
@@ -136,5 +159,58 @@ void readDictionary(char *dictName) {
  * final 20% of your grade, you cannot assume words have a bounded length.
  */
 void processInput() {
-  // -- TODO --
+    // -- TODO --
+    const int size = 1000000;
+    char *word = (char*) malloc(sizeof(char) * size);
+    int idx = 0;
+    char c;
+    while ((c = getchar()) != EOF || strlen(word) != 0) {
+        if (isalpha(c) || isdigit(c)) {
+            *(word + idx++) = c;
+            continue;
+        }
+
+        *(word + idx) = '\0';
+        idx = 0;
+        // if the exact word appears as key in the dictionary
+        char *replace_word = (char *) findData(dictionary, word);
+        if (replace_word != NULL) {
+            printf("%s", replace_word);
+            if (c != EOF) printf("%c", c);
+            // free the pointer to word
+            memset(word, 0, sizeof(word));
+            continue;
+        }
+
+        // if all but first character lowercase appears
+        char *tmp = (char*) malloc(sizeof(char) * size);
+        strcpy(tmp, word);
+        int i = 1;
+        for (; i < strlen(tmp); i++) {
+            *(tmp + i) = tolower(*(tmp + i));
+        }
+        if ((replace_word = findData(dictionary, tmp)) != NULL) {
+            printf("%s", replace_word);
+            if (c != EOF) printf("%c", c);
+            memset(word, 0, sizeof(word));
+            free(tmp);
+            continue;
+        }
+
+        // if all character lowercase appears
+        *tmp = tolower(*tmp);
+        if ((replace_word = findData(dictionary, tmp)) != NULL) {
+            printf("%s", replace_word);
+            if (c != EOF) printf("%c", c);
+            memset(word, 0, sizeof(word));
+            free(tmp);
+            continue;
+        }
+
+        printf("%s", word);
+        if (c != EOF) printf("%c", c);
+        memset(word, 0, sizeof(word));
+        free(tmp);
+    }
+    free(word);
 }
